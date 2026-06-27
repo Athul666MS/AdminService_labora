@@ -1,8 +1,40 @@
 import os
+import sys
 from pathlib import Path
+
+import pymysql
+
+pymysql.version_info = (2, 2, 1, "final", 0)
+pymysql.__version__ = "2.2.1"
+pymysql.install_as_MySQLdb()
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from labora_shared.env_config import (
+    load_dotenv_for_service,
+    get_jwt_public_key_path,
+    get_db_config,
+    mysql_databases,
+    read_public_key_pem,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv_for_service(BASE_DIR)
+
+_cfg = get_db_config()
+DB_HOST = _cfg["DB_HOST"]
+DB_NAME = _cfg["DB_NAME"]
+DB_USER = _cfg["DB_USER"]
+DB_PASSWORD = _cfg["DB_PASSWORD"]
+DB_PORT = _cfg["DB_PORT"]
+
+JWT_PUBLIC_KEY_PATH = get_jwt_public_key_path(BASE_DIR)
+SERVICE_API_KEY = os.getenv(
+    "SERVICE_API_KEY"
+)
 # --------------------
 # SECURITY
 # --------------------
@@ -10,9 +42,22 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "super-secret-microservice-key-123")
 
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["*"]   # change in production
+ALLOWED_HOSTS = ["*"]
 
-
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 # --------------------
 # APPS
 # --------------------
@@ -23,12 +68,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
-
-    "admin",
+    "labora_admin",
 ]
 
 
@@ -40,7 +83,6 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -60,13 +102,7 @@ WSGI_APPLICATION = "adminservice.wsgi.application"
 # --------------------
 # DATABASE
 # --------------------
-# fallback sqlite for dev (you can plug MySQL later)
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+DATABASES = mysql_databases()
 
 
 # --------------------
@@ -96,24 +132,34 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# --------------------
-# JWT (SimpleJWT)
-# --------------------
+# ================================
+# JWT CONFIG
+# ================================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+        "labora_admin.authentication.CustomJWTAuthentication",
+    ),
 }
-
-JWT_PUBLIC_KEY_PATH = os.getenv(
-    "JWT_PUBLIC_KEY_PATH",
-    str(BASE_DIR.parent / "jwt_keys" / "public.pem"),
-)
-with open(JWT_PUBLIC_KEY_PATH, encoding="utf-8") as public_key_file:
-    JWT_PUBLIC_KEY = public_key_file.read()
+JWT_PUBLIC_KEY = read_public_key_pem(JWT_PUBLIC_KEY_PATH)
+PUBLIC_KEY = JWT_PUBLIC_KEY
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
     "VERIFYING_KEY": JWT_PUBLIC_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+
+# --------------------------------------------------
+# SERVICE URLs
+# --------------------------------------------------
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")
+CLIENT_PROFILE_SERVICE_URL = os.getenv("CLIENT_PROFILE_SERVICE_URL")
+FREELANCER_PROFILE_SERVICE_URL = os.getenv("FREELANCER_PROFILE_SERVICE_URL")
+MESSAGE_SERVICE_URL = os.getenv("MESSAGE_SERVICE_URL")
+JOB_SERVICE_URL = os.getenv("JOB_SERVICE_URL")
+SKILL_SERVICE_URL = os.getenv("SKILL_SERVICE_URL")
+APPLICATION_SERVICE_URL = os.getenv("APPLICATION_SERVICE_URL")
+PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
+REVIEW_SERVICE_URL = os.getenv("REVIEW_SERVICE_URL")
+NOTIFICATION_SERVICE_URL = os.getenv("NOTIFICATION_SERVICE_URL")
