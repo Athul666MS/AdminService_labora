@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Admin Service – Freelancing Platform
 
 ## Overview
@@ -612,3 +613,118 @@ For issues and questions:
 - Open an issue on GitHub
 - Contact the development team
 - Check Django REST Framework documentation
+=======
+# Admin Service
+
+Admin Service is the administrative API for Labora. It verifies admin JWTs, aggregates data from other microservices through internal endpoints, manages local admin records such as disputes and action logs, and proxies selected service-management operations.
+
+## Responsibilities
+
+- Provide dashboard statistics from Auth, Job, Application, Payment, and Review services.
+- Aggregate client and freelancer lists from profile services.
+- Block and unblock users by calling Auth Service.
+- Verify users locally.
+- Proxy job, application, payment, review, skill, and notification administration to the owning services.
+- Manage payment disputes and admin action logs locally.
+
+## Features
+
+- Admin-only access through JWT role checks.
+- Service-key authenticated calls to internal endpoints on downstream services.
+- Local admin action logging for block/unblock, verification, notifications, disputes, and review deletion workflows.
+- Paginated admin logs with filters.
+- Local dispute resolution and rejection workflows.
+
+## API Endpoints
+
+Base path: `/api/`
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `admin/dashboard/` | Aggregate platform statistics. |
+| `GET` | `admin/users/` | Return client and freelancer profile lists. |
+| `PATCH` | `admin/users/<role>/<user_id>/block/` | Block a user through Auth Service. |
+| `PATCH` | `admin/users/<role>/<user_id>/unblock/` | Unblock a user through Auth Service. |
+| `POST` | `admin/users/verify/` | Create a local verified `UserVerification` record. |
+| `GET` | `admin/jobs/` | Proxy internal job list. |
+| `GET` | `admin/jobs/<job_id>/` | Proxy internal job detail. |
+| `GET` | `admin/applications/` | Proxy internal application list. |
+| `GET` | `admin/applications/<application_id>/` | Proxy internal application detail. |
+| `GET` | `admin/payments/` | Proxy internal payment list. |
+| `GET` | `admin/payments/stats/` | Proxy internal payment stats. |
+| `GET` | `admin/payments/<payment_id>/` | Proxy internal payment detail. |
+| `GET` | `admin/reviews/` | Proxy internal review list. |
+| `GET` | `admin/reviews/<review_id>/` | Proxy internal review detail. |
+| `DELETE` | `admin/reviews/<review_id>/delete/` | Delete a review through Review Service. |
+| `GET`, `POST` | `admin/skills/` | List or create skills through Skill Service. |
+| `GET`, `PUT`, `DELETE` | `admin/skills/<skill_id>/` | Manage one skill through Skill Service. |
+| `POST` | `admin/notifications/send/` | Send one notification through Notification Service. |
+| `POST` | `admin/notifications/broadcast/` | Broadcast notifications through Notification Service. |
+| `GET` | `admin/notifications/` | Proxy internal notification history. |
+| `GET`, `POST` | `admin/disputes/` | List or create local payment disputes. |
+| `GET` | `admin/disputes/<dispute_id>/` | Return a local dispute. |
+| `PATCH` | `admin/disputes/<dispute_id>/resolve/` | Mark a dispute resolved. |
+| `PATCH` | `admin/disputes/<dispute_id>/reject/` | Mark a dispute rejected. |
+| `GET` | `admin/logs/` | List admin action logs with optional filters. |
+| `GET` | `admin/logs/<log_id>/` | Return one admin action log. |
+
+## Authentication Requirements
+
+All Admin Service endpoints require `Authorization: Bearer <access_token>` and the token role must pass `labora_admin.permissions.IsAdminUser`. Downstream service calls use `X-Service-Key: <SERVICE_API_KEY>`.
+
+## Internal Service Endpoints
+
+Admin Service primarily consumes internal endpoints exposed by the owning services:
+
+- Auth: user stats, block, unblock.
+- Client/Freelancer Profile: internal profile lists.
+- Job: internal job list, detail, and stats.
+- Application: internal application list, detail, and stats.
+- Payment: internal payment list, detail, and stats.
+- Review: internal review list, detail, stats, and delete.
+- Skill: internal skill CRUD.
+- Notification: internal create, broadcast, list, and detail.
+
+## Environment Variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DJANGO_SECRET_KEY` | Django secret key. |
+| `DEBUG` | Enables debug mode when set to `True`. |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | MySQL database configuration. |
+| `JWT_PUBLIC_KEY_PATH` | Public key used to verify Auth Service JWTs. |
+| `SERVICE_API_KEY` | Shared key used for downstream internal calls. |
+| `AUTH_SERVICE_URL`, `CLIENT_PROFILE_SERVICE_URL`, `FREELANCER_PROFILE_SERVICE_URL`, `JOB_SERVICE_URL`, `APPLICATION_SERVICE_URL`, `PAYMENT_SERVICE_URL`, `REVIEW_SERVICE_URL`, `SKILL_SERVICE_URL`, `NOTIFICATION_SERVICE_URL` | Downstream service base URLs. |
+
+## Setup
+
+```bash
+cd AdminService
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 8011
+```
+
+## Service Architecture
+
+- Django project: `adminservice`
+- App: `labora_admin`
+- Authentication: `labora_admin.authentication.CustomJWTAuthentication`
+- Admin permission: `labora_admin.permissions.IsAdminUser`
+- Domain views: `labora_admin/views/`
+- URL groups: `labora_admin/api_urls/`
+- Local data: admin profiles, user verifications, payment disputes, and action logs
+
+## Database Models
+
+- `AdminProfile`: local profile for admin users.
+- `UserVerification`: local verification record for client/freelancer users.
+- `PaymentDispute`: local dispute state for payment/application ids.
+- `AdminActionLog`: local audit log of admin operations.
+
+## Notification/Event Flow
+
+Admin Service does not deliver WebSocket events itself. It calls Notification Service internal endpoints to send or broadcast notifications and records selected notification actions in `AdminActionLog`.
+>>>>>>> a387250 (docs(admin): update administrative API documentation)
